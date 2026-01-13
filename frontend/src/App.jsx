@@ -1,22 +1,6 @@
 import { useState } from 'react';
 import './App.css';
 
-/**
- * AI Movie Recommendation Frontend
- * 
- * ARCHITECTURE NOTE:
- * This frontend is intentionally simple - it has NO logic for:
- * - Genre detection
- * - Movie type assumptions
- * - Recommendation logic
- * 
- * It simply:
- * 1. Accepts user input (movie name OR description)
- * 2. Sends it to the backend
- * 3. Displays the LLM's response
- * 
- * ALL intelligence lives in the LLM on the backend.
- */
 function App() {
   const [input, setInput] = useState('');
   const [recommendations, setRecommendations] = useState('');
@@ -54,7 +38,6 @@ function App() {
       const data = await response.json();
       setRecommendations(data.recommendations);
     } catch (err) {
-      // Provide helpful error messages
       if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
         setError('Cannot connect to backend. Make sure the backend server is running on port 3001.');
       } else {
@@ -108,11 +91,31 @@ function App() {
             <h2>Recommendations</h2>
             <div className="recommendations-content">
               {recommendations.split('\n').map((line, index) => {
-                // Format the LLM response nicely
                 if (line.trim().startsWith('MOVIE')) {
                   return (
                     <div key={index} className="movie-item">
                       <strong>{line}</strong>
+                    </div>
+                  );
+                } else if (line.trim().startsWith('Rating:')) {
+                  const ratingMatch = line.match(/Rating:\s*(\d+(?:\.\d+)?)\/10/);
+                  const rating = ratingMatch ? parseFloat(ratingMatch[1]) : null;
+                  return (
+                    <div key={index} className="rating-container">
+                      <span className="rating-label">Rating:</span>
+                      <span className="rating-value">{rating ? `${rating}/10` : 'N/A'}</span>
+                      {rating && (
+                        <div className="rating-stars">
+                          {Array.from({ length: 10 }, (_, i) => (
+                            <span
+                              key={i}
+                              className={`star ${i < Math.round(rating) ? 'filled' : ''}`}
+                            >
+                              ★
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 } else if (line.trim().startsWith('Explanation:')) {

@@ -1,26 +1,47 @@
 import express from 'express';
-import { getDatabase } from '../config/database.js';
+import { MongoClient } from 'mongodb';
+import dotenv from 'dotenv';
 import { getRecommendationsFromLLM } from '../services/llmService.js';
+
+dotenv.config();
+
+let client = null;
+let db = null;
+
+export async function connectDatabase() {
+  if (client) {
+    return db;
+  }
+
+  const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/movie-ai';
+  
+  try {
+    client = new MongoClient(uri);
+    await client.connect();
+    db = client.db();
+    console.log('✅ Connected to MongoDB');
+    return db;
+  } catch (error) {
+    console.warn('⚠️  MongoDB connection failed (optional - storage only):', error.message);
+    console.warn('⚠️  Server will continue without MongoDB. Recommendations will still work.');
+    return null;
+  }
+}
+
+export async function closeDatabase() {
+  if (client) {
+    await client.close();
+    client = null;
+    db = null;
+  }
+}
+
+function getDatabase() {
+  return db;
+}
 
 const router = express.Router();
 
-/**
- * POST /api/recommendations
- * 
- * AI-FIRST ARCHITECTURE:
- * This endpoint receives raw user input and sends it directly to the LLM.
- * The LLM is responsible for ALL decision-making:
- * - Understanding if input is a movie name or description
- * - Inferring genre, tone, and intent
- * - Deciding which movies to recommend
- * - Generating explanations
- * 
- * NO rule-based logic.
- * NO keyword matching.
- * NO hardcoded movie lists.
- * 
- * MongoDB is used ONLY to store the interaction for persistence/analytics.
- */
 router.post('/', async (req, res) => {
   try {
     const { input } = req.body;
@@ -29,11 +50,8 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Input is required' });
     }
 
-    // Send user input directly to LLM - the LLM is the brain
     const llmResponse = await getRecommendationsFromLLM(input.trim());
 
-    // Store in MongoDB for persistence/analytics only
-    // This does NOT influence future recommendations
     const db = getDatabase();
     if (db) {
       await db.collection('recommendations').insertOne({
@@ -43,17 +61,13 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Return ONLY the LLM output
-    res.json({ 
-      recommendations: llmResponse 
-    });
+    res.json({ recommendations: llmResponse });
 
   } catch (error) {
     console.error('Error in recommendations endpoint:', error);
     console.error('Error details:', error.message);
     console.error('Error stack:', error.stack);
     
-    // Return detailed error for debugging
     const errorResponse = {
       error: 'AI is temporarily unavailable',
       details: error.message,
