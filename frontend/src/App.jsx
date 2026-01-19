@@ -11,7 +11,7 @@ function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!input.trim()) {
       setError('Please enter a movie name or description');
       return;
@@ -22,13 +22,16 @@ function App() {
     setRecommendations('');
 
     try {
-      const response = await fetch(`${API_URL}/api/recommendations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ input: input.trim() }),
-      });
+      const response = await fetch(
+        `${API_URL}/api/recommendations/recommend`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ input: input.trim() }),
+        }
+      );
 
       if (!response.ok) {
         const data = await response.json();
@@ -36,10 +39,17 @@ function App() {
       }
 
       const data = await response.json();
-      setRecommendations(data.recommendations);
+
+      // ✅ FIXED: backend returns `result`
+      setRecommendations(data.result || data.recommendations || '');
     } catch (err) {
-      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-        setError('Cannot connect to backend. Make sure the backend server is running on port 3001.');
+      if (
+        err.message.includes('Failed to fetch') ||
+        err.message.includes('NetworkError')
+      ) {
+        setError(
+          'Cannot connect to backend. Backend may be sleeping (Render free tier). Try again in 10 seconds.'
+        );
       } else {
         setError(err.message || 'AI is temporarily unavailable');
       }
@@ -66,12 +76,12 @@ function App() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="e.g., 'Rush' or 'racing movies based on real stories'"
+              placeholder="e.g., 'Rush' or 'dark emotional sci-fi in space'"
               className="input-field"
               disabled={loading}
             />
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="submit-btn"
               disabled={loading}
             >
@@ -80,11 +90,7 @@ function App() {
           </div>
         </form>
 
-        {error && (
-          <div className="error-message">
-            {error}
-          </div>
-        )}
+        {error && <div className="error-message">{error}</div>}
 
         {recommendations && (
           <div className="recommendations">
@@ -97,40 +103,24 @@ function App() {
                       <strong>{line}</strong>
                     </div>
                   );
-                } else if (line.trim().startsWith('Rating:')) {
-                  const ratingMatch = line.match(/Rating:\s*(\d+(?:\.\d+)?)\/10/);
-                  const rating = ratingMatch ? parseFloat(ratingMatch[1]) : null;
-                  return (
-                    <div key={index} className="rating-container">
-                      <span className="rating-label">Rating:</span>
-                      <span className="rating-value">{rating ? `${rating}/10` : 'N/A'}</span>
-                      {rating && (
-                        <div className="rating-stars">
-                          {Array.from({ length: 10 }, (_, i) => (
-                            <span
-                              key={i}
-                              className={`star ${i < Math.round(rating) ? 'filled' : ''}`}
-                            >
-                              ★
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                } else if (line.trim().startsWith('Explanation:')) {
+                }
+
+                if (line.trim().startsWith('Explanation:')) {
                   return (
                     <div key={index} className="explanation">
                       {line}
                     </div>
                   );
-                } else if (line.trim()) {
+                }
+
+                if (line.trim()) {
                   return (
                     <div key={index} className="recommendation-line">
                       {line}
                     </div>
                   );
                 }
+
                 return null;
               })}
             </div>
