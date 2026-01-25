@@ -37,9 +37,19 @@ app.use("/api/recommendations", recommendationsRouter);
 
 /* Start server */
 app.listen(PORT, () => {
+  console.log("ENV CHECK:", {
+    groq: !!process.env.GROQ_API_KEY,
+    omdb: !!process.env.OMDB_API_KEY,
+  });
+
   if (!process.env.GROQ_API_KEY) {
     console.error("❌ GROQ_API_KEY missing");
   }
+
+  if (!process.env.OMDB_API_KEY) {
+    console.error("❌ OMDB_API_KEY missing");
+  }
+
   console.log(`Server running on http://localhost:${PORT}`);
   console.log("LLM: Ready (using Groq)");
 });
