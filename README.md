@@ -18,12 +18,6 @@ An AI-first movie recommendation system where **the LLM is the brain** - all dec
 - ✅ LLM decides which movies to recommend
 - ✅ LLM generates explanations
 
-**NO:**
-- ❌ Rule-based genre detection
-- ❌ Keyword matching logic
-- ❌ Hardcoded recommendation lists
-- ❌ Fallback movie databases
-
 ## 📁 Project Structure
 
 ```
@@ -190,3 +184,10 @@ Explanation: A psychological sci-fi thriller set in space that delves into isola
 ---
 
 **Remember**: The LLM is the brain. Everything else is infrastructure.
+
+---
+
+👨‍💻 Author
+
+Aryan Kumar
+B.Tech CSE Student
