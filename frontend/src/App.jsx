@@ -4,11 +4,55 @@ import "./App.css";
 function App() {
   const [input, setInput] = useState("");
   const [recommendations, setRecommendations] = useState("");
+  const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // ✅ Vercel env variable
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+
+  const parseRecommendations = (text, moviesData) => {
+    const lines = text.split("\n");
+    const parsed = [];
+    let current = null;
+    let index = 0;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+
+      const movieMatch = trimmed.match(/^MOVIE\s+\d+:\s*(.+)$/i);
+      if (movieMatch) {
+        if (current) parsed.push(current);
+
+        const title = movieMatch[1].trim();
+        const movieData = moviesData[index] || {};
+
+        current = {
+          title,
+          rating: null,
+          explanation: null,
+          poster: movieData.poster || null,
+          watchProviders: movieData.watchProviders || [],
+        };
+
+        index++;
+        continue;
+      }
+
+      const ratingMatch = trimmed.match(/^Rating:\s*(\d+(\.\d+)?)\/10/i);
+      if (ratingMatch && current) {
+        current.rating = parseFloat(ratingMatch[1]);
+        continue;
+      }
+
+      const explanationMatch = trimmed.match(/^Explanation:\s*(.+)$/i);
+      if (explanationMatch && current) {
+        current.explanation = explanationMatch[1];
+      }
+    }
+
+    if (current) parsed.push(current);
+    return parsed;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,14 +65,13 @@ function App() {
     setLoading(true);
     setError("");
     setRecommendations("");
+    setMovies([]);
 
     try {
       const response = await fetch(`${API_URL}/api/recommendations`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ input: input.trim() })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: input.trim() }),
       });
 
       if (!response.ok) {
@@ -37,20 +80,14 @@ function App() {
       }
 
       const data = await response.json();
-
-      // ✅ correct response key
       setRecommendations(data.recommendations);
+      setMovies(data.movies || []);
     } catch (err) {
-      if (
-        err.message.includes("Failed to fetch") ||
-        err.message.includes("NetworkError")
-      ) {
-        setError(
-          "Cannot connect to backend. Backend may be waking up (Render free tier). Please try again."
-        );
-      } else {
-        setError(err.message || "AI is temporarily unavailable");
-      }
+      setError(
+        err.message.includes("fetch")
+          ? "Cannot connect to backend. Make sure server is running."
+          : err.message || "AI is temporarily unavailable"
+      );
     } finally {
       setLoading(false);
     }
@@ -72,11 +109,11 @@ function App() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="e.g. Rush or racing movies based on real stories"
+              placeholder="e.g. Interstellar or emotional sci-fi"
               className="input-field"
               disabled={loading}
             />
-            <button type="submit" className="submit-btn" disabled={loading}>
+            <button className="submit-btn" disabled={loading}>
               {loading ? "Thinking..." : "Get Recommendations"}
             </button>
           </div>
@@ -88,52 +125,35 @@ function App() {
           <div className="recommendations">
             <h2>Recommendations</h2>
             <div className="recommendations-content">
-              {recommendations.split("\n").map((line, index) => {
-                if (line.startsWith("MOVIE")) {
-                  return (
-                    <div key={index} className="movie-item">
-                      <strong>{line}</strong>
+              {parseRecommendations(recommendations, movies).map(
+                (movie, index) => (
+                  <div key={index} className="movie-card">
+                    <div className="movie-poster">
+                      {movie.poster ? (
+                        <img src={movie.poster} alt={movie.title} />
+                      ) : (
+                        <div className="no-poster">No Image</div>
+                      )}
                     </div>
-                  );
-                }
 
-                if (line.startsWith("Rating:")) {
-                  const ratingMatch = line.match(/(\d+(\.\d+)?)/);
-                  const rating = ratingMatch ? Number(ratingMatch[1]) : 0;
+                    <div className="movie-info">
+                      <div className="movie-title">{movie.title}</div>
 
-                  return (
-                    <div key={index} className="rating-container">
-                      <span>{line}</span>
-                      <div className="rating-stars">
-                        {Array.from({ length: 10 }, (_, i) => (
-                          <span
-                            key={i}
-                            className={`star ${
-                              i < Math.round(rating) ? "filled" : ""
-                            }`}
-                          >
-                            ★
-                          </span>
-                        ))}
-                      </div>
+                      {movie.rating !== null && (
+                        <div className="rating">
+                          Rating: {movie.rating}/10
+                        </div>
+                      )}
+
+                      {movie.explanation && (
+                        <div className="explanation">
+                          <strong>Explanation:</strong> {movie.explanation}
+                        </div>
+                      )}
                     </div>
-                  );
-                }
-
-                if (line.startsWith("Explanation:")) {
-                  return (
-                    <div key={index} className="explanation">
-                      {line}
-                    </div>
-                  );
-                }
-
-                return line.trim() ? (
-                  <div key={index} className="recommendation-line">
-                    {line}
                   </div>
-                ) : null;
-              })}
+                )
+              )}
             </div>
           </div>
         )}
