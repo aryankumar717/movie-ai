@@ -29,6 +29,8 @@ No hard-coded rules. No genre filters. Pure AI reasoning.
 
 📁 Project Structure
 
+## 📁 Project Structure
+
 movie-ai/
 ├── backend/
 │   ├── config/
@@ -41,18 +43,13 @@ movie-ai/
 │   ├── server.js
 │   ├── .env.example
 │   └── package.json
-│
 ├── frontend/
 │   ├── src/
 │   │   ├── App.jsx
 │   │   ├── App.css
-│   │   ├── main.jsx
-│   │   └── index.css
-│   ├── index.html
+│   │   └── main.jsx
 │   └── package.json
-│
 └── README.md
-
 
 ⸻
 
