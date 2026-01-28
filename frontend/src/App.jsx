@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
+
 function App() {
   const [input, setInput] = useState("");
   const [recommendations, setRecommendations] = useState("");
@@ -8,6 +9,11 @@ function App() {
   const [error, setError] = useState("");
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+
+  // 🔥 Warm up backend to reduce cold start delay
+  useEffect(() => {
+    fetch(`${API_URL}/health`).catch(() => {});
+  }, [API_URL]);
 
   const parseRecommendations = (text, moviesData) => {
     const lines = text.split("\n");
@@ -84,7 +90,7 @@ function App() {
     } catch (err) {
       setError(
         err.message.includes("fetch")
-          ? "Cannot connect to backend. Make sure server is running."
+          ? "Cannot connect to backend. Please try again."
           : err.message || "AI is temporarily unavailable"
       );
     } finally {
@@ -113,7 +119,9 @@ function App() {
               disabled={loading}
             />
             <button className="submit-btn" disabled={loading}>
-              {loading ? "Thinking… almost there!" : "Get Recommendations"}
+              {loading
+                ? "🎬 Finding movies you’ll love…"
+                : "Get Recommendations"}
             </button>
           </div>
         </form>
@@ -123,6 +131,7 @@ function App() {
         {recommendations && (
           <div className="recommendations">
             <h2>Recommendations</h2>
+
             <div className="recommendations-content">
               {parseRecommendations(recommendations, movies).map(
                 (movie, index) => (
@@ -150,7 +159,7 @@ function App() {
                         </div>
                       )}
 
-                      {movie.watchProviders && movie.watchProviders.length > 0 && (
+                      {movie.watchProviders.length > 0 && (
                         <div className="watch-section">
                           <div className="watch-title">Where to watch</div>
 
@@ -164,7 +173,9 @@ function App() {
                                 className="watch-provider"
                               >
                                 <img src={p.logo} alt={p.provider} />
-                                <span>{p.provider}</span>
+                                <span className="provider-name">
+                                  {p.provider}
+                                </span>
                               </a>
                             ))}
                           </div>
